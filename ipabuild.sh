@@ -5,10 +5,6 @@ usage() {
 }
 set -e
 
-# store original stdout
-exec 9>&1
-# send all output to stderr
-exec 1>&2
 
 while [[ "${1-}" ]]; do
     if [[ "$1" = "-h" ]] || [[ "$1" == "--help" ]]; then
@@ -22,6 +18,8 @@ while [[ "${1-}" ]]; do
         shift
     fi
 done
+
+printf '%s="%s"\n' "STATUS" "init"
 
 PROJECT_PATH="${PROJECT_PATH-.}"
 if [[ -d "${PROJECT_PATH//.xcodeproj/}.xcodeproj" ]]; then
@@ -52,6 +50,19 @@ fi
 
 mkdir -p "$BUILD_PATH"
 cd "$BUILD_PATH"
+
+STATUS=running
+
+# output current variables
+for var in ( APPLICATION_NAME TARGET_NAME PROJECT_PATH STATUS ); do
+    printf '%s="%s"\n' "$var" "${!var}"
+done
+
+# store original stdout
+exec 9>&1
+# send all output to stderr
+exec 1>&2
+
 
 xcodebuild -project "$PROJECT_PATH" \
     -scheme "$APPLICATION_NAME" \
@@ -85,10 +96,11 @@ zip -vr "${TARGET_NAME}.ipa" Payload
 rm -rf "$TARGET_APP"
 rm -rf Payload
 
-echo "Successfully built"
-
 # revert to normal stdout
 exec 1>&9
 
+echo 'STATUS=complete'
+
 # output full path to the .ipa
+printf 'FILENAME='
 readlink -f "${TARGET_NAME}.ipa"

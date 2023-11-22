@@ -54,7 +54,7 @@ cd "$BUILD_PATH"
 STATUS=running
 
 # output current variables
-for var in ( APPLICATION_NAME TARGET_NAME PROJECT_PATH STATUS ); do
+for var in APPLICATION_NAME TARGET_NAME PROJECT_PATH STATUS ; do
     printf '%s="%s"\n' "$var" "${!var}"
 done
 

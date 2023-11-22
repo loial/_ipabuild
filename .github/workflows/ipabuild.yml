@@ -1,0 +1,22 @@
+name: Manual workflow
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      # any preparation steps
+      - name: Get ipabuild.sh script
+        run: >
+          curl -O https://raw.githubusercontent.com/loial/_ipabuild/main/ipabuild.sh &&
+          chmod u+x ipabuild.sh
+      - name: Run ipabuild.sh
+        id: ipabuild
+        run: >
+          ./ipabuild.sh >> "$GITHUB_OUTPUT"
+      - name: Upload IPA
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.ipabuild.outputs.TARGET_NAME }}.ipa
+          path: ${{ steps.ipabuild.outputs.FILENAME }}

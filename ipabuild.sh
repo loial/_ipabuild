@@ -5,7 +5,6 @@ usage() {
 }
 set -e
 
-
 while [[ "${1-}" ]]; do
     if [[ "$1" = "-h" ]] || [[ "$1" == "--help" ]]; then
         usage
@@ -19,26 +18,34 @@ while [[ "${1-}" ]]; do
     fi
 done
 
-printf '%s="%s"\n' "STATUS" "init"
-
-PROJECT_PATH="${PROJECT_PATH-.}"
-if [[ -d "${PROJECT_PATH//.xcodeproj/}.xcodeproj" ]]; then
-    PROJECT_PATH="${PROJECT_PATH//.xcodeproj/}.xcodeproj"
-else
-    if [[ "$PROJECT_PATH" =~ .*/.* ]] || [[ "$PROJECT_PATH" == "." ]]; then
-        _find="$(find "$PROJECT_PATH" -type d -name '*.xcodeproj' | head -1)"
-        if [[ $_find ]]; then
-            PROJECT_PATH="$_find"
-        fi
-    fi
-fi
+printf '%s="%s"\n' "STATUS" "init" | tee -a >(cat >&2)
 
 CURRENT_LOCATION="$(pwd)"
+
+PROJECT_PATH="${PROJECT_PATH-.}"
+# expand single "." or leading "./" to current path
+if [[ $PROJECT_PATH =~ ^\.(/.*)?$ ]]; then
+    PROJECT_PATH="${CURRENT_LOCATION}${PROJECT_PATH##.}"
+fi
+if [[ -d "${PROJECT_PATH%%.xcodeproj}.xcodeproj" ]]; then
+    PROJECT_PATH="${PROJECT_PATH%%.xcodeproj}.xcodeproj"
+else
+    if [[ -d "$PROJECT_PATH" ]]; then
+        _find="$(find "$PROJECT_PATH" -type d -name '*.xcodeproj' | head -1)"
+    else
+        _find="$(find "$CURRENT_PATH" -type d -name "$PROJECT_PATH.xcodeproj" | head -1)"
+    fi
+    if [[ $_find ]]; then
+        PROJECT_PATH="$_find"
+    fi
+fi
+[[ $PROJECT_PATH =~ ^/ ]] || PROJECT_PATH="$CURRENT_LOCATION/$PROJECT_PATH"
+
 BUILD_PATH="$(pwd)/build"
 
 cd "$(dirname $PROJECT_PATH)"
 WORKING_LOCATION="$(pwd)"
-APPLICATION_NAME="$(basename "${PROJECT_PATH//.xcodeproj/}")" # "Chicken Butt"
+APPLICATION_NAME="$(basename "${PROJECT_PATH%%.xcodeproj}")"
 
 if [[ -z "$TARGET_NAME" ]]; then
     if [[ "$APPLICATION_NAME" != "App" ]]; then
@@ -55,7 +62,7 @@ STATUS=running
 
 # output current variables
 for var in APPLICATION_NAME TARGET_NAME PROJECT_PATH STATUS ; do
-    printf '%s="%s"\n' "$var" "${!var}"
+    printf '%s="%s"\n' "$var" "${!var}"  | tee -a >(cat >&2)
 done
 
 # store original stdout
